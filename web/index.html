@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>BGWFlix</title>
+
+  <script src="flutter_bootstrap.js?v=20250424" async></script>
+  <script src="no_reload_handler.js?v=20250424" defer></script>
+  <script src="cache_refresh.js?v=20250424" defer></script>
+
+  <style>
+html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000;
+      font-family: Arial, sans-serif;
+
+      /* أهم سطر: منع السحب للتحديث */
+      overscroll-behavior: none;
+      touch-action: none;
+    }
+
+    #flutter-host {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #000;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* إضافة دعم للوضع الأفقي في الهواتف المحمولة */
+    @media screen and (orientation: portrait) and (max-width: 768px) {
+      body.landscape-mode {
+        transform: rotate(-90deg);
+        transform-origin: left top;
+        width: 100vh;
+        height: 100vw;
+        overflow-x: hidden;
+        position: absolute;
+        top: 100%;
+        left: 0;
+      }
+    }
+
+    /* تحسين عرض الفيديو في وضع ملء الشاشة */
+    .video-fullscreen {
+      width: 100vw !important;
+      height: 100vh !important;
+      object-fit: contain !important;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      z-index: 9999 !important;
+    }
+
+    .loading-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .play-button-svg {
+        width: 70px; /* Adjust size */
+        height: 70px;
+        margin-bottom: 30px;
+        fill: none;
+        stroke: red;
+        stroke-width: 8; /* Adjust outline thickness */
+    }
+
+    .loading-circle {
+      width: 50px; /* Adjust size */
+      height: 50px;
+      border: 5px solid rgba(255, 0, 0, 0.3); /* Lighter red border */
+      border-top-color: red; /* Solid red for spinning part */
+      border-radius: 50%;
+      animation: spin 1s linear infinite; /* Keep existing spin animation */
+      margin-bottom: 20px; /* Space below circle */
+    }
+
+    .loading-text {
+      color: white;
+      margin-top: 0; /* Reset margin-top */
+      margin-bottom: 30px; /* Space below text */
+      font-size: 18px; /* Adjust font size */
+      font-family: Arial, sans-serif;
+    }
+
+    .progress-bar-container {
+      width: 200px; /* Adjust width */
+      height: 6px; /* Adjust height */
+      background-color: rgba(255, 0, 0, 0.2); /* Faint red background */
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      width: 20%; /* Initial width, JS will update this */
+      height: 100%;
+      background-color: red;
+      border-radius: 3px;
+      transition: width 0.5s ease-in-out; /* Smooth transition */
+    }
+
+    /* Ensure loading fills screen and centers */
+    .loading {
+      /* Keep existing styles like position, z-index, etc. */
+      display: flex; /* Use flexbox for centering */
+      justify-content: center;
+      align-items: center;
+      background-color: #000; /* Ensure black background */
+      /* Remove flex-direction: column if it was there */
+    }
+
+</style>
+
+  <meta name="description" content="BGWFlix - منصة مشاهدة الأفلام والمسلسلات">
+  <meta name="theme-color" content="#000000">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+</head>
+
+<body>
+
+  <div id="loading" class="loading">
+    <div class="loading-content">
+      <svg class="play-button-svg" viewBox="0 0 100 100"><polygon points="30,20 80,50 30,80"></polygon></svg>
+      <div class="loading-circle"></div>
+      <div class="loading-text">جاري تحميل BGWFlix...</div>
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill"></div>
+      </div>
+    </div>
+</div>
+
+  <div id="flutter-host"></div>
+
+  <script>
+    // متغير للتحقق من حالة تحميل Flutter
+    window.flutterLoaded = false;
+    
+    // تحسين سرعة التحميل من خلال تحميل الموارد بشكل متوازي
+    if ('loading' in HTMLImageElement.prototype) {
+      console.log('تم تفعيل التحميل الكسول للصور');
+    }
+
+    // تحسين أداء التطبيق
+    window.addEventListener('load', function() {
+      console.log('تم تحميل الصفحة');
+      
+      // التحقق من حالة تحميل Flutter كل ثانية
+      var loadingCheckInterval = setInterval(function() {
+        if (window.flutterLoaded) {
+          clearInterval(loadingCheckInterval);
+          return;
+        }
+        
+        // التحقق من وجود عناصر Flutter في الصفحة
+        var flutterElements = document.querySelectorAll('flt-glass-pane');
+        if (flutterElements.length > 0) {
+          console.log('تم اكتشاف عناصر Flutter');
+          window.flutterLoaded = true;
+          hideLoadingScreen();
+          clearInterval(loadingCheckInterval);
+        }
+      }, 1000);
+      
+      // إزالة شاشة التحميل بعد 15 ثانية كحد أقصى حتى لو لم يتم تحميل Flutter
+      setTimeout(function() {
+        if (!window.flutterLoaded) {
+          console.log('انتهت مهلة انتظار Flutter، إزالة شاشة التحميل');
+          hideLoadingScreen();
+          clearInterval(loadingCheckInterval);
+        }
+      }, 15000);
+    });
+
+    // دالة لإخفاء شاشة التحميل
+    function hideLoadingScreen() {
+      const loading = document.getElementById('loading');
+      if (loading && loading.style.display !== 'none') {
+        loading.style.display = 'none';
+        console.log('تم إخفاء شاشة التحميل');
+      }
+    }
+
+    // الاستماع لحدث Flutter الأول
+    window.addEventListener('flutter-first-frame', function () {
+      console.log('تم استلام حدث flutter-first-frame');
+      window.flutterLoaded = true;
+      hideLoadingScreen();
+    });
+
+    // دعم المتصفحات القديمة
+    if (!window.CustomEvent) {
+      window.CustomEvent = function (event, params) {
+        params = params || { bubbles: false, cancelable: false, detail: null };
+        var evt = document.createEvent('CustomEvent');
+        evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail);
+        return evt;
+      };
+      window.CustomEvent.prototype = window.Event.prototype;
+    }
+
+    // منع السحب للتحديث في iOS داخل Telegram
+    document.addEventListener('touchmove', function (e) {
+      // منع السحب للتحديث فقط إذا كان العنصر هو body أو html
+      if (e.target === document.body || e.target === document.documentElement) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    document.addEventListener('gesturestart', function (e) {
+      e.preventDefault();
+    });
+
+    // دوال مساعدة للوضع الأفقي وملء الشاشة
+    function requestFullscreen() {
+      var elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      } else if (elem.webkitRequestFullscreen) { /* Safari */
+        elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) { /* IE11 */
+        elem.msRequestFullscreen();
+      }
+    }
+    
+    function requestLandscapeMode() {
+      // تطبيق الوضع الأفقي على الجسم
+      document.body.classList.add('landscape-mode');
+      
+      // محاولة قفل الاتجاه إذا كان مدعوماً
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(function(error) {
+          console.log('خطأ في قفل الاتجاه: ' + error);
+        });
+      } else if (screen.lockOrientation) {
+        screen.lockOrientation('landscape');
+      } else if (screen.mozLockOrientation) {
+        screen.mozLockOrientation('landscape');
+      } else if (screen.msLockOrientation) {
+        screen.msLockOrientation('landscape');
+      }
+      
+      // طلب وضع ملء الشاشة بعد تطبيق الوضع الأفقي
+      setTimeout(requestFullscreen, 300);
+    }
+    
+    function resetOrientation() {
+      // إزالة الوضع الأفقي من الجسم
+      document.body.classList.remove('landscape-mode');
+      
+      // الخروج من وضع ملء الشاشة
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      }
+      
+      // إلغاء قفل الاتجاه إذا كان مدعوماً
+      if (screen.orientation && screen.orientation.unlock) {
+        screen.orientation.unlock();
+      }
+    }
+
+    // تحسين أداء الفيديو
+    function optimizeVideoPerformance() {
+      // تقليل جودة الفيديو تلقائياً إذا كان الاتصال بطيئاً
+      if (navigator.connection) {
+        const connection = navigator.connection;
+        if (connection.downlink < 1.5) {
+          console.log('اتصال بطيء، تقليل جودة الفيديو تلقائياً');
+          window.lowQualityMode = true;
+        }
+      }
+      
+      // تعطيل التحميل المسبق للفيديو إذا كان الجهاز ضعيفاً
+      const isLowEndDevice = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2;
+      if (isLowEndDevice) {
+        console.log('جهاز منخفض الأداء، تعطيل التحميل المسبق');
+        window.disablePreloading = true;
+      }
+    }
+
+    // تنفيذ تحسين أداء الفيديو عند تحميل الصفحة
+    optimizeVideoPerformance();
+    
+    // إضافة معالج أخطاء عام
+    window.addEventListener('error', function(event) {
+      console.error('خطأ JavaScript:', event.message, 'في', event.filename, 'السطر:', event.lineno);
+    });
+  </script>
+
+  <!-- إضافة الإشارة المباشرة إلى ملف main.dart.js -->
+  <script src="main.dart.js?v=20250424" defer></script>
+
+</body>
+</html>

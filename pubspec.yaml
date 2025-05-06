@@ -1,0 +1,48 @@
+name: bgw_flix
+description: تطبيق BGW Flix لمشاهدة الأفلام والمسلسلات
+
+# تحديث إصدار Flutter والدارت ليتوافق مع أحدث إصدار
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # المكتبات الأساسية
+  cupertino_icons: ^1.0.6
+  http: ^0.13.6
+  shared_preferences: ^2.2.2
+
+  # مكتبات تشغيل الفيديو - تحديث الإصدارات
+  video_player: ^2.7.0
+  chewie: ^1.5.0
+
+  # مكتبة تشغيل فيديوهات يوتيوب
+  youtube_player_flutter: ^8.1.2
+
+  # مكتبة استخراج روابط فيديو يوتيوب
+  youtube_explode_dart: ^1.12.4
+
+  # مكتبة HTML لبيئة الويب
+  universal_html: ^2.2.4
+  
+  # إضافة مكتبات إضافية للتوافق
+  wakelock_plus: ^1.1.4
+  flutter_inappwebview: ^5.8.0
+
+  # مكتبة التحميل التدريجي
+  infinite_scroll_pagination: ^4.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.3
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/ReelBox.jpeg
+
